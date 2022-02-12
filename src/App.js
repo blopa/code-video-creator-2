@@ -107,6 +107,7 @@ function App() {
             }
         });
 
+        window.isReady = true;
         return [rawContent, functions];
     }, [files]);
 
@@ -229,6 +230,7 @@ function App() {
                 </div>
             </div>
             <button
+                data-puppeteer-selector="refresh"
                 className="button"
                 onClick={reCalculateFunctions}
                 style={{
@@ -238,6 +240,7 @@ function App() {
                 Refresh!
             </button>
             <button
+                data-puppeteer-selector="refresh-storage"
                 className="button"
                 onClick={() => localStorage.clear()}
                 style={{
