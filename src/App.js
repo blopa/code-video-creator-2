@@ -3,6 +3,7 @@ import {Fragment, useCallback, useEffect, useMemo, useState} from "react";
 
 // Vendor styles
 import "ace-builds/src-noconflict/mode-javascript";
+import "ace-builds/src-noconflict/mode-html";
 import "ace-builds/src-noconflict/theme-monokai";
 
 // Styles
@@ -22,6 +23,13 @@ const getLanguageFromFilename = (fileName) => {
         return 'html';
     }
 };
+
+const intervals = [];
+const oldSetInterval = window.setInterval;
+window.setInterval = function(func, callback) {
+    const interval = oldSetInterval(func, callback);
+    intervals.push(interval);
+}
 
 const localFiles = JSON.parse(localStorage.getItem('files') || JSON.stringify([{ name: 'untitled.js', isSelected: true, content: '' }]));
 const savedIndex = JSON.parse(localStorage.getItem('currentFileIndex') || '0');
@@ -90,7 +98,8 @@ function App() {
                             return file.name === scriptName;
                         });
                         functions.push(
-                            new Function(file.content)
+                            // new Function(file.content)
+                            file.content
                         );
                     }
                 });
@@ -98,10 +107,14 @@ function App() {
             }
         });
 
-        // functions.forEach((f) => {
-        //     f();
-        // });
         return [rawContent, functions];
+    }, [files]);
+
+    useEffect(() => {
+        functions.forEach((f) => {
+            const func = new Function(f);
+            func();
+        });
     }, [refreshKey]);
 
     useEffect(() => {
@@ -110,114 +123,129 @@ function App() {
     }, [currentFileIndex, files]);
 
     const reCalculateFunctions = () => {
+        intervals.forEach((interval) => {
+            window.clearInterval(interval);
+        });
         setRefreshKey(Date.now());
     };
 
     return (
-        <div
-            className={styles.container}
-            style={{
-                width: `${960 * scale}px`,
-                height: `${540 * scale}px`,
-            }}
-        >
+        <div>
             <div
+                className={styles.container}
                 style={{
-                    width: '50%',
-                    backgroundColor: '#2f3129',
+                    width: `${960 * scale}px`,
+                    height: `${540 * scale}px`,
                 }}
             >
-                <Files
-                    files={files}
-                    onEditName={(newName, index) => {
-                        if (newName) {
-                            setFiles([
-                                ...files.map((file, idx) => {
-                                    if (idx === index) {
+                <div
+                    style={{
+                        width: '50%',
+                        backgroundColor: '#2f3129',
+                    }}
+                >
+                    <Files
+                        files={files}
+                        onEditName={(newName, index) => {
+                            if (newName) {
+                                setFiles([
+                                    ...files.map((file, idx) => {
+                                        if (idx === index) {
+                                            return {
+                                                ...file,
+                                                name: newName,
+                                            };
+                                        }
+
+                                        return file;
+                                    }),
+                                ]);
+                            }
+                        }}
+                        onSelectFile={(index) => {
+                            if (currentFileIndex !== index) {
+                                setCurrentFileIndex(index);
+                                setFiles([
+                                    ...files.map((file, idx) => {
                                         return {
                                             ...file,
-                                            name: newName,
+                                            isSelected: idx === index,
                                         };
-                                    }
-
-                                    return file;
-                                }),
-                            ]);
-                        }
-                    }}
-                    onSelectFile={(index) => {
-                        if (currentFileIndex !== index) {
-                            setCurrentFileIndex(index);
+                                    }),
+                                ]);
+                            }
+                        }}
+                        onAddMore={() => {
+                            setCurrentFileIndex(files.length);
                             setFiles([
-                                ...files.map((file, idx) => {
+                                ...files.map((file) => {
                                     return {
                                         ...file,
-                                        isSelected: idx === index,
+                                        isSelected: false,
                                     };
                                 }),
+                                { name: `untitled-${files.length}.js`, isSelected: true, content: '' }
                             ]);
-                        }
+                        }}
+                    />
+                    <AceEditor
+                        className={styles.editor}
+                        style={{}}
+                        width="100%"
+                        height="calc(100% - 30px)"
+                        mode={currentFile.mode}
+                        theme="monokai"
+                        name="blah2"
+                        onChange={onChange}
+                        fontSize={16 * scale}
+                        showPrintMargin={false}
+                        showGutter={true}
+                        highlightActiveLine={true}
+                        value={currentFile.content}
+                        setOptions={{
+                            enableBasicAutocompletion: false,
+                            enableLiveAutocompletion: false,
+                            enableSnippets: false,
+                            showLineNumbers: true,
+                            tabSize: 2,
+                        }}
+                    />
+                </div>
+                <div
+                    style={{
+                        width: '50%',
+                        border: '2px solid #f3f3f3',
                     }}
-                    onAddMore={() => {
-                        setCurrentFileIndex(files.length);
-                        setFiles([
-                            ...files.map((file) => {
-                                return {
-                                    ...file,
-                                    isSelected: false,
-                                };
-                            }),
-                            { name: `untitled-${files.length}.js`, isSelected: true, content: '' }
-                        ]);
-                    }}
-                />
-                <AceEditor
-                    className={styles.editor}
-                    style={{}}
-                    width="100%"
-                    height="calc(100% - 30px)"
-                    mode={currentFile.mode}
-                    theme="monokai"
-                    name="blah2"
-                    onChange={onChange}
-                    fontSize={16 * scale}
-                    showPrintMargin={false}
-                    showGutter={true}
-                    highlightActiveLine={true}
-                    value={currentFile.content}
-                    setOptions={{
-                        enableBasicAutocompletion: false,
-                        enableLiveAutocompletion: false,
-                        enableSnippets: false,
-                        showLineNumbers: true,
-                        tabSize: 2,
-                    }}
-                />
+                >
+                    {rawHtmlContent && (
+                        <Fragment>
+                            <div
+                                dangerouslySetInnerHTML={{
+                                    __html: rawHtmlContent,
+                                }}
+                            />
+                        </Fragment>
+                    )}
+                </div>
             </div>
-            <div
+            <button
+                className="button"
+                onClick={reCalculateFunctions}
                 style={{
-                    width: '50%',
-                    border: '2px solid #eaebe8',
+                    marginTop: '20px',
                 }}
             >
-                {rawHtmlContent && (
-                    <Fragment>
-                        <div className={styles['button-wrapper']}>
-                            <button
-                                className="button"
-                                onClick={reCalculateFunctions}
-                            >
-                                Refresh!
-                            </button>
-                        </div>
-                        <div
-                            dangerouslySetInnerHTML={{
-                                __html: rawHtmlContent,
-                            }}
-                        />
-                    </Fragment>
-                )}
-            </div>
+                Refresh!
+            </button>
+            <button
+                className="button"
+                onClick={() => localStorage.clear()}
+                style={{
+                    marginTop: '20px',
+                }}
+            >
+                Clear LocalStorage!
+            </button>
         </div>
     );
 }

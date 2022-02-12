@@ -5,11 +5,3 @@
 .container {
     display: flex;
 }
-
-.button-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /*background-color: #272822;*/
-    padding: 10px 0;
-}
