@@ -1,6 +1,7 @@
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { exec, execSync } = require('child_process');
+const { PuppeteerScreenRecorder } = require('puppeteer-screen-recorder');
 
 const WIDTH = 960;
 const HEIGHT = 540;
@@ -32,7 +33,7 @@ const generatePreviews = () => {
 const runPuppeteer = async (p) => {
     console.log('opening headless browser');
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: [`--window-size=${WIDTH},${HEIGHT}`],
         defaultViewport: {
             width: WIDTH,
@@ -42,13 +43,27 @@ const runPuppeteer = async (p) => {
 
     const page = await browser.newPage();
 
+    const config = {
+        followNewTab: false,
+        fps: 25,
+        ffmpeg_Path: null,
+        videoFrame: {
+            width: WIDTH,
+            height: HEIGHT,
+        },
+        aspectRatio: '16:9',
+    };
+
+    const recorder = new PuppeteerScreenRecorder(page, config);
+
     console.log('going to localhost');
     await page.goto('http://localhost:3000/');
     await page.waitForFunction(() => window.isReady);
+    await page.reload();
+    await page.waitForFunction(() => window.isReady);
 
-    await page.evaluate(() => {
-        document.querySelectorAll('.ace_line');
-    });
+    await recorder.start('./output.mp4');
+    await page.waitForTimeout(1000);
 
     const getLinePosition = async(line) => {
         return await page.evaluate(async (line) => {
@@ -64,7 +79,6 @@ const runPuppeteer = async (p) => {
     };
 
     const data = await getLinePosition(11);
-    await page.waitForTimeout(3000);
     await page.mouse.click(data.x, data.y);
     await page.waitForTimeout(3000);
 
