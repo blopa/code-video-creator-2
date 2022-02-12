@@ -131,6 +131,10 @@ function App() {
         setRefreshKey(Date.now());
     };
 
+    useEffect(() => {
+        window.reCalculateFunctions = reCalculateFunctions;
+    }, []);
+
     return (
         <div>
             <div

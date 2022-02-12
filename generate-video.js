@@ -100,20 +100,25 @@ const runPuppeteer = async (p) => {
                 const [, line] = command.split(';');
                 const data = await getLinePosition(page, line);
                 await page.mouse.click(data.x, data.y);
-                await page.waitForTimeout(1000);
+                await page.waitForTimeout(500);
+                await page.keyboard.press('Enter');
+                await page.keyboard.press('ArrowUp');
+                await page.waitForTimeout(500);
             } else if (command.includes('refresh')) {
                 // TODO make this not scroll to element
-                const refreshButton = await page.$(`[data-puppeteer-selector="refresh"]`)
-                await refreshButton.click();
+                // const refreshButton = await page.$(`[data-puppeteer-selector="refresh"]`)
+                // await refreshButton.click();
+                await page.evaluate(() => window.reCalculateFunctions());
                 await page.waitForTimeout(1000);
             }
         } else if (line) {
-            await page.keyboard.press('Enter');
-            await page.keyboard.press('ArrowUp');
+            await page.waitForTimeout(500);
             for (const letter of [...line]) {
                 await page.keyboard.press(letter);
-                await page.waitForTimeout(getRandomBetween(120, 250));
+                await page.waitForTimeout(getRandomBetween(100, 220));
             }
+            await page.waitForTimeout(500);
+            await page.keyboard.press('Enter');
         }
     }
 
