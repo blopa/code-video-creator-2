@@ -1,10 +1,10 @@
-const path = require('path');
 const puppeteer = require('puppeteer');
 const { exec, execSync } = require('child_process');
 const { PuppeteerScreenRecorder } = require('puppeteer-screen-recorder');
 
-const WIDTH = 960;
-const HEIGHT = 540;
+const scale = 2;
+const WIDTH = 960 * scale;
+const HEIGHT = 540 * scale;
 
 console.log(process.argv);
 const args = [...process.argv].slice(2);
@@ -22,7 +22,7 @@ const generatePreviews = () => {
     // console.log('Process ID:', process.pid);
 
     process.stdout.on('data', (data) => {
-        console.log(data.toString());
+        // console.log(data.toString());
         if (data.toString().includes('webpack 5.68.0 compiled')) {
             console.log('Webpack done executing');
             runPuppeteer(process);

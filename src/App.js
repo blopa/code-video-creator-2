@@ -12,7 +12,7 @@ import styles from './app.module.css';
 // Components
 import Files from "./Files/Files";
 
-const scale = 1;
+const scale = 2;
 
 const getLanguageFromFilename = (fileName) => {
     if (fileName.endsWith('.js')) {
