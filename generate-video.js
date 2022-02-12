@@ -1,20 +1,29 @@
+const path = require("path");
+const { readFileSync } = require("fs");
 const puppeteer = require('puppeteer');
+const minimist = require("minimist");
 const { exec, execSync } = require('child_process');
 const { PuppeteerScreenRecorder } = require('puppeteer-screen-recorder');
+const params = minimist(process.argv, {
+    // boolean: ['showSomething'],
+});
 
 const scale = 2;
 const WIDTH = 960 * scale;
 const HEIGHT = 540 * scale;
 
-console.log(process.argv);
-const args = [...process.argv].slice(2);
+const initialFiles = [...params['_']].slice(2);
+const commandsFilepath = params.commands;
+
+const getRandomBetween = (min, max) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
 
 const generatePreviews = () => {
     execSync('npx kill-port 3000');
     console.log('Starting Webpack');
     let process;
-    if (args.length) {
-        const stringfied = JSON.stringify(args);
+    if (initialFiles.length) {
+        const stringfied = JSON.stringify(initialFiles);
         process = exec(`REACT_APP_INITIAL_FILES='${stringfied}' npm run start-puppeteer-server`);
     } else {
         process = exec('npm run start-puppeteer-server');
@@ -30,6 +39,19 @@ const generatePreviews = () => {
     });
 };
 
+const getLinePosition = async(page, line) => {
+    return await page.evaluate(async (line) => {
+        return await new Promise(resolve => {
+            const lines = document.querySelectorAll('.ace_line');
+            const bounds = lines[line - 1].getBoundingClientRect();
+            resolve({
+                x: bounds.x,
+                y: bounds.y,
+            });
+        })
+    }, line);
+};
+
 const runPuppeteer = async (p) => {
     console.log('opening headless browser');
     const browser = await puppeteer.launch({
@@ -41,6 +63,7 @@ const runPuppeteer = async (p) => {
         },
     });
 
+    const commands = readFileSync(path.resolve(__dirname, 'src', 'initial_files', commandsFilepath), { encoding: 'utf8' });
     const page = await browser.newPage();
 
     const config = {
@@ -65,23 +88,38 @@ const runPuppeteer = async (p) => {
     await recorder.start('./output.mp4');
     await page.waitForTimeout(1000);
 
-    const getLinePosition = async(line) => {
-        return await page.evaluate(async (line) => {
-            return await new Promise(resolve => {
-                const lines = document.querySelectorAll('.ace_line');
-                const bounds = lines[line - 1].getBoundingClientRect();
-                resolve({
-                    x: bounds.x,
-                    y: bounds.y,
-                });
-            })
-        }, line);
-    };
+    for (const line of commands.split('\n')) {
+        if (line.trimStart().startsWith('//#')) {
+            const [, command] = line.split('//#');
+            if (command.includes('open_file')) {
+                const [, fileName] = command.split(';');
+                const fileTab = await page.$(`[data-puppeteer-selector="${fileName}"]`)
+                await fileTab.click();
+                await page.waitForTimeout(1000);
+            } else if (command.includes('go_to_line')) {
+                const [, line] = command.split(';');
+                const data = await getLinePosition(page, line);
+                await page.mouse.click(data.x, data.y);
+                await page.waitForTimeout(1000);
+            } else if (command.includes('refresh')) {
+                // TODO make this not scroll to element
+                const refreshButton = await page.$(`[data-puppeteer-selector="refresh"]`)
+                await refreshButton.click();
+                await page.waitForTimeout(1000);
+            }
+        } else if (line) {
+            await page.keyboard.press('Enter');
+            await page.keyboard.press('ArrowUp');
+            for (const letter of [...line]) {
+                await page.keyboard.press(letter);
+                await page.waitForTimeout(getRandomBetween(120, 250));
+            }
+        }
+    }
 
-    const data = await getLinePosition(11);
-    await page.mouse.click(data.x, data.y);
     await page.waitForTimeout(3000);
 
+    await recorder.stop();
     await browser.close();
     p.kill();
     console.log('done!');

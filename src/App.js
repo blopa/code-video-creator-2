@@ -5,6 +5,7 @@ import {Fragment, useCallback, useEffect, useMemo, useState} from "react";
 import "ace-builds/src-noconflict/mode-javascript";
 import "ace-builds/src-noconflict/mode-html";
 import "ace-builds/src-noconflict/theme-monokai";
+import "ace-builds/src-noconflict/ext-language_tools";
 
 // Styles
 import styles from './app.module.css';
@@ -203,7 +204,10 @@ function App() {
                         showGutter={true}
                         highlightActiveLine={true}
                         value={currentFile.content}
+                        // enableBasicAutocompletion={false}
+                        // enableLiveAutocompletion={false}
                         setOptions={{
+                            behavioursEnabled: false,
                             enableBasicAutocompletion: false,
                             enableLiveAutocompletion: false,
                             enableSnippets: false,

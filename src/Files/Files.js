@@ -13,6 +13,7 @@ function Files({
             {files.map((file, index) => {
                 return (
                     <li
+                        data-puppeteer-selector={file.name}
                         key={file.name}
                         onBlur={(event) => {
                             const element = event.target;
@@ -41,6 +42,7 @@ function Files({
             })}
             <li
                 key="add-more"
+                data-puppeteer-selector="add-new-file"
                 className={styles['list-item']}
                 onClick={onAddMore}
             >
