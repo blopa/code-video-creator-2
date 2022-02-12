@@ -1,0 +1,17 @@
+.list-wrapper {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
+}
+
+.list-item {
+    padding: 5px 10px;
+    color: #8F908A;
+    background-color: #272727;
+    border: 1px solid #202020;
+}
+
+.selected-list-item {
+    background-color: #202020;
+}
