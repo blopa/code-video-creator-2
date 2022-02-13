@@ -110,7 +110,7 @@ function App() {
 
         window.isReady = true;
         return [rawContent, functions];
-    }, [files]);
+    }, [refreshKey]);
 
     useEffect(() => {
         functions.forEach((f) => {
@@ -221,6 +221,7 @@ function App() {
                     />
                 </div>
                 <div
+                    data-puppeteer-selector="result"
                     style={{
                         width: '50%',
                         border: '2px solid #f3f3f3',

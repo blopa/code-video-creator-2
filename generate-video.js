@@ -68,7 +68,7 @@ const runPuppeteer = async (p) => {
 
     const config = {
         followNewTab: false,
-        fps: 25,
+        fps: 60,
         ffmpeg_Path: null,
         videoFrame: {
             width: WIDTH,
@@ -88,12 +88,14 @@ const runPuppeteer = async (p) => {
     await recorder.start('./output.mp4');
     await page.waitForTimeout(1000);
 
-    for (const line of commands.split('\n')) {
+    let breakLine = false;
+    const lines = commands.split('\n');
+    for (const [index, line] of lines.entries()) {
         if (line.trimStart().startsWith('//#')) {
             const [, command] = line.split('//#');
             if (command.includes('open_file')) {
                 const [, fileName] = command.split(';');
-                const fileTab = await page.$(`[data-puppeteer-selector="${fileName}"]`)
+                const fileTab = await page.$(`[data-puppeteer-selector="${fileName}"]`);
                 await fileTab.click();
                 await page.waitForTimeout(1000);
             } else if (command.includes('go_to_line')) {
@@ -105,24 +107,52 @@ const runPuppeteer = async (p) => {
                 await page.keyboard.press('ArrowUp');
                 await page.waitForTimeout(500);
             } else if (command.includes('refresh')) {
-                // TODO make this not scroll to element
-                // const refreshButton = await page.$(`[data-puppeteer-selector="refresh"]`)
-                // await refreshButton.click();
+                // const result = await page.$(`[data-puppeteer-selector="result"]`);
+                // await result.click();
                 await page.evaluate(() => window.reCalculateFunctions());
+                await page.waitForTimeout(1000);
+            } else if (command.includes('rename_file')) {
+                const [, fileName, newFileName] = command.split(';');
+                const [fileTab] = await page.$x(`//*[@data-puppeteer-selector="${fileName}"]`);
+
+                // await page.waitForTimeout(1000);
+                await fileTab.evaluate(async (element, fileName, newFileName) => {
+                    element.innerText = fileName;
+                    await new Promise(r => setTimeout(r, 1000));
+                    element.innerText = '';
+                    for (const letter of [...newFileName]) {
+                        await new Promise(r => setTimeout(r, 100));
+                        element.innerText += letter;
+                    }
+                }, fileName, newFileName);
+                await fileTab.click();
+                await fileTab.click();
+                const result = await page.$(`[data-puppeteer-selector="result"]`);
+                await result.click();
                 await page.waitForTimeout(1000);
             }
         } else if (line) {
+            const editor = await page.$('.ace_text-input');
+            await editor.click();
+            await editor.focus();
             await page.waitForTimeout(500);
-            for (const letter of [...line]) {
-                await page.keyboard.press(letter);
-                await page.waitForTimeout(getRandomBetween(100, 220));
+            if (breakLine) {
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(500);
             }
-            await page.waitForTimeout(500);
-            await page.keyboard.press('Enter');
+
+            for (const letter of [...line]) {
+                // TODO typing is bugged
+                await page.waitForTimeout(getRandomBetween(50, 110));
+                await page.keyboard.press(letter);
+                await page.waitForTimeout(getRandomBetween(50, 110));
+            }
+
+            breakLine = true;
         }
     }
 
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
 
     await recorder.stop();
     await browser.close();
